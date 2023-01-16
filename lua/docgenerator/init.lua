@@ -1,6 +1,18 @@
 local lfs = require"lfs"
+local utf8 = require("lua.utf8")
 
 local M = {}
+
+
+local function has_value (tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+
+    return false
+end
 
 local printt = function(tableau)
     print(vim.inspect(tableau))
@@ -8,20 +20,26 @@ end
 
 -- see if the file exists
 local file_exists = function(file)
-  local f = io.open(file, "rb")
-  if f then f:close() end
-  return f ~= nil
+    local f = io.open(file, "rb")
+    if f then f:close() end
+    return f ~= nil
 end
 
 -- get all lines from a file, returns an empty 
 -- list/table if the file does not exist
 local lines_from = function(file)
-  if not file_exists(file) then return {} end
-  local lines = {}
-  for line in io.lines(file) do 
-    lines[#lines + 1] = line
-  end
-  return lines
+    if not file_exists(file) then return {} end
+    local lines = {}
+    for line in io.lines(file) do 
+        lines[#lines + 1] = line
+    end
+    return lines
+end
+
+local strptime = function(chaine)
+    jour, mois, annee = utf8.match(chaine, "(%d%d) ([%a]+) (%d%d%d%d)")
+    print(jour, mois, annee, chaine)
+
 end
 
 local titres = function(fichiers)
@@ -32,28 +50,30 @@ local titres = function(fichiers)
         nom = name
         local lignes = lines_from(name)
         local datation = string.match(lignes[1], "# (.+)") 
+        strptime(datation)
         info_fichier[name] = {date = datation}
         local header = {}
         local head = ""
         local flag = 0
         for _, titre in ipairs(lignes) do
             if flag == 1 and string.match(titre, "## ") then
-            flag = 0
+                flag = 0
             end
             if flag == 1 then
                 table.insert(header[head], titre) 
             end
             if string.match(titre, "## ") then
-                head = string.match(titre, "## (.+)")
+                head = string.match(titre, "## .+ (.+) —") or string.match(titre, "## (.+)")
                 -- print("head"..head)
                 header[head] = {}
                 flag = 1
             end
 
         end
-    info_fichier[nom].header = header
+        info_fichier[nom].header = header
     end
-    printt(info_fichier)
+    -- printt(info_fichier)
+    return info_fichier
 end
 
 local on_exit = function(job_id, code, _)
@@ -103,11 +123,49 @@ M.seancesenfants = function()
         end
     end
     table.sort(fichiers)
-    printt(fichiers)
-    fichiers = titres(fichiers)
-    printt(fichiers)
+    -- printt(fichiers)
+    local titre = titres(fichiers)
+    -- printt(fichiers)
+    local prenom = {}
+    for k, v in pairs(titre) do
+        for w, x in pairs(v.header) do
+            if not has_value(prenom, w) then
+                table.insert(prenom, w)
+            end
+        end
+
+    end
+    printt(prenom)
 
     local contenu = ""
+    for _, pren in pairs(prenom) do
+        contenu = contenu .. "# " ..pren
+        contenu = contenu .. "\n"
+        for _, v in pairs(titre) do
+            contenu = contenu .. "## " .. v.date
+            contenu = contenu .. "\n"
+            for w, x in pairs(v.header) do
+                for k, l in pairs(x) do
+                    if l == "" then contenu = contenu .." \n"end
+                    if w == pren then
+                    contenu = contenu .. l end
+
+                    contenu = contenu .. "\n"
+                end
+            end
+        end
+    end
+-- Écrire le fichier
+    -- print(contenu)
+    local racine = vim.fn.expand("%:p:h")
+    local note_enfant = racine .. "/noteEnfant.md"
+    local file = io.open(note_enfant, "w")
+    file:write(contenu)
+    file:close()
+
+
+
+
 
 end
 
