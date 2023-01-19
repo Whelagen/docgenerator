@@ -1,5 +1,5 @@
 local lfs = require"lfs"
-local utf8 = require("lua.utf8")
+local utf8 = require("lua-utf8")
 
 local M = {}
 
@@ -38,7 +38,19 @@ end
 
 local strptime = function(chaine)
     jour, mois, annee = utf8.match(chaine, "(%d%d) ([%a]+) (%d%d%d%d)")
-    print(jour, mois, annee, chaine)
+    local code_mois = {janvier= 1,
+                 ["février"]= 2,
+                 mars= 3,
+                 avril= 4,
+                 mai= 5,
+                 juin= 6,
+                 juillet= 7,
+                 ["août"]= 8,
+                 septembre= 9,
+                 octobre= 10,
+                 novembre= 11,
+                 décembre= 12}
+    print(jour, code_mois[mois], annee)
 
 end
 
